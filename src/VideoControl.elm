@@ -25,7 +25,7 @@ import Task
 import Signal
 import Easing
 import Bitwise
-import Drag exposing (..)
+import DragR exposing (..)
 
 import Widget
 import MapControl exposing (..)
@@ -57,24 +57,23 @@ clock =
                     let
                         progress = 
                             case msEvt of
-                                Just (MoveBy (dx, _)) -> 
-                                    Basics.max (progress_ + ((toFloat dx) / 800) * td0 * 3600000) st0
+                                Moved dx _ -> 
+                                    (Basics.max (progress_ + ((toFloat dx) / 800) * td0 * 3600000) st0)
                                     |> Basics.min (st0 + 3600000 * td0)
                                 _ -> if clk == 0 || progress_ == 0 then st0 else animate (clk - clockTag_) animation_
 
                         anime =
                            case msEvt of
-                               Just (MoveBy (dx, _)) -> animation_ |> from progress
+                               Moved _ _ -> animation_ |> from progress
                                _ -> (if clk == 0 || progress_ == 0
                                     then animation_ |> from st0 |> to (st0 + 3600000 * td0) |> speed speedd
                                     else if speedd == speed_
                                     then animation_
                                     else animation_ |> from progress |> speed speedd )
-                                    
                         
                         clockTag = 
                             case msEvt of
-                                Just (MoveBy (dx, _)) -> clk
+                                Moved _ _ -> clk
                                 _ -> (if clk == 0 || speedd /= speed_
                                      then clk 
                                      else clockTag_)
@@ -82,21 +81,16 @@ clock =
                     in
                         (progress, anime, clockTag, speedd)
             in
-                Signal.foldp step (0, animation 0 |> ease Easing.linear, 0, 0 ) (Utils.zip5 realClock speedSg startTimeSg timeDeltaSg filteredMouseEvt)
+                Signal.foldp step (0, animation 0 |> ease Easing.linear, 0, 0 ) (Utils.zip5 realClock speedSg startTimeSg timeDeltaSg mouseEvt)
     in
-        tick |> Signal.map (\(x, y, z, w) -> x)
+        tick |> Signal.map (\(x, _, _, _) -> x)
 
 videoRewindTaskSg = Signal.map3 (\t1 t2 td -> if t1 >= t2 + 3600000 * td then Signal.send videoOps.address Stop else Task.succeed ()) clock startTimeSg timeDeltaSg
 
 forwardFlow: Signal.Mailbox Bool
 forwardFlow = Signal.mailbox False
 
-check m = 
-    case m of
-       Just _ -> True
-       _ -> False
-
-filteredMouseEvt = Drag.track False forwardFlow.signal
+mouseEvt = dragEvents forwardFlow.signal (Signal.map (\s -> s /= Stop) videoOps.signal)
 
 progressArea = spacer 440 30 |> Graphics.Input.hoverable (Signal.message forwardFlow.address)
 

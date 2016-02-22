@@ -4,7 +4,6 @@ import Graphics.Element exposing (..)
 import List exposing (..)
 import Color exposing (..)
 import Mouse
-import Drag exposing (..)
 import Graphics.Input
 import String
 import Bitwise exposing (..)
@@ -12,6 +11,7 @@ import Signal.Extra
 import FontAwesome
 import Html exposing (..)
 import Html.Events exposing (..)
+import DragR exposing (..)
 
 slider : String -> Int -> Float -> Bool -> Signal Bool ->(Signal (Element, Float), Signal Bool)
 slider name width initValue isVertical enabledSg = 
@@ -26,23 +26,19 @@ slider name width initValue isVertical enabledSg =
         rPos = width - knotWidthHalf
         initPosition = ((initValue * (toFloat (width - knotWidth))) |> round) + knotWidthHalf
         
-        sliderOps : Signal Int
-        sliderOps = 
+        sliderStep msEvt pos = 
             let
-                merge msEvt enabled =
-                    if enabled then
-                        case msEvt of
-                            Just (MoveBy (dx, dy)) ->
-                                if isVertical
-                                then dy
-                                else dx
-                            _ -> 0
-                    else 0
+                newPos = case msEvt of
+                    Moved dx dy ->
+                        (if isVertical
+                            then pos + dy
+                            else pos + dx) 
+                        |> Basics.min rPos |> Basics.max lPos
+                    _ -> pos
             in
-                Signal.map2 merge (Drag.track False hoverFlow.signal) enabledSg
+                newPos
                 
-        step a acc = (a + acc) |> Basics.min rPos |> Basics.max lPos
-        posSignal = Signal.foldp step initPosition sliderOps |> Signal.dropRepeats
+        posSignal = Signal.foldp sliderStep initPosition (dragEvents hoverFlow.signal enabledSg) |> Signal.dropRepeats
         
         slideRect = (if isVertical then spacer (knotHeight + 10) (width + 20) else spacer (width + 20) (knotHeight + 10))
                     |> Graphics.Input.hoverable (Signal.message hoverFlow.address)

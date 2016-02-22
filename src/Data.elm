@@ -16,17 +16,10 @@ import Time exposing (..)
 
 type alias VehiclTrace = (Int, String, Color, Form, Form, List TileMap.Gpsx)
 
-parseGps : List (Int, String, Float, Float, Float, Float) -> Color 
+augGps : List TileMap.Gpsx -> Color 
             -> (Color -> Int -> Html) -> TileMap.Map -> Time -> Float -> VehiclTrace
-parseGps gpsxRaw colr icn mapp startTime timeDelta =
+augGps gpsx colr icn mapp startTime timeDelta =
     let 
-        parseRow (vid, timeStr, lat, lon, speed, direction) = 
-            {vehicleId = vid
-            , vehicleName = vid - 2000000 |> toString |> String.append "#"
-            , timestamp = Utils.timeFromString timeStr
-            , lat = lat, lon = lon, speed = speed, direction = direction}
-        isValidTime x = x.timestamp > 0
-        isSameId g1 g2 = g1.vehicleId == g2.vehicleId
         emptyForm = toForm empty
         process x = if List.isEmpty x then (-1, "", Color.red, Graphics.Element.empty  |> toForm, emptyForm, []) else
                         case List.head x of
@@ -38,9 +31,8 @@ parseGps gpsxRaw colr icn mapp startTime timeDelta =
                                 in
                                     (gps.vehicleId, gps.vehicleName, colr, (icn colr 24) |> Html.toElement 24 24 |> toForm, fullTrace, sortedGps) 
                             _ -> (-1, "", Color.red, Graphics.Element.empty  |> toForm, emptyForm, [])
-        gpsx = gpsxRaw |> List.map parseRow |> List.filter isValidTime |> process
     in
-        gpsx
+        process gpsx
 
 showTrace: VehiclTrace -> Time -> Int -> TileMap.Map -> (Form, Element)
 showTrace (_, vname, colr, icn, _, gps) t tcLength mapp = 
