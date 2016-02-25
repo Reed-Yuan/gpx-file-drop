@@ -19,7 +19,7 @@ import Effects exposing (Effects)
 import StartApp
 import Json.Decode as Json exposing (Value, andThen)
 import FileReader exposing (FileRef, NativeFile, readAsTextFile, Error(..))
-import DropZone exposing (Action(Drop), dropZoneEventHandlers, isHovering)
+import DropZone exposing (..)
 import MimeType exposing (MimeType(Text))
 
 import Data exposing (..)
@@ -27,6 +27,7 @@ import MapControl exposing (..)
 import VideoControl exposing (..)
 import VehicleControl exposing (..)
 import Widget
+import Utils
   
 global_colors : List Color
 global_colors = [Color.red, Color.blue, Color.brown, Color.orange, Color.darkGreen]
@@ -35,16 +36,25 @@ global_icons = [FontAwesome.truck, FontAwesome.ambulance, FontAwesome.taxi, Font
 
 port vehicleIn : Signal (List (List TileMap.Gpsx))
 
-port txtOut : Signal (List String)
-port txtOut =
- 
+port txtOut : Signal (List ( String, String ))
+port txtOut = txtOutMbx.signal
+
+txtOutMbx : Signal.Mailbox (List (String, String))
+txtOutMbx = Signal.mailbox []
+
+port txtOutTsk : Signal (Task a ())
+port txtOutTsk = 
+    let
+        perf fileTsk = (Task.map snd fileTsk) `Task.andThen` (\x -> Signal.send txtOutMbx.address x)
+    in
+        Signal.map perf parseTxtSg
+
+parseTxtSg : Signal (Task a ( List ( String, Error ), List ( String, String ) )) 
 parseTxtSg = 
     let
-        pairWithFileName fname fTsk = Task.map ((,) fname) fTsk |> mapError ((,) fname)
-        parseFiles (fname, fileTsks) = 
-            List.map (\fTsk -> pairWithFileName fname fTsk) fileTsks
+        parseFile (fname, fileTsks) = (Task.map ((,) fname) fileTsks) |> (mapError ((,) fname))
     in
-        Signal.map (snd >> parseFiles) parseTasksSg
+        Signal.map (snd >> (List.map parseFile) >> Utils.doAll) parseTasksSg
 
 port mouseWheelIn : Signal MouseWheel
 
@@ -54,9 +64,6 @@ port browserIn : Signal String
 
 port runner : Signal (Task x ())
 port runner = VideoControl.videoRewindTaskSg
-
-port tasks : Signal (Task.Task Effects.Never ())
-port tasks = app.tasks
 
 shadowFlow : Signal.Mailbox Bool
 shadowFlow = Signal.mailbox False
@@ -78,35 +85,36 @@ dropFileMbx = Signal.mailbox DropZone.DragLeave
 parseTasksSg = 
     let
         parseSingle nativeFile (errs, acts) =
-            if nativeFile.size > 500000 then (Result.Err ("File too big (> 500K):" ++ nativeFile.name) |> Result.Err |> (::) errs
-            else Result.Ok (nativeFile.name, readAsTextFile nativeFile.blob) |> (::) acts
+            if nativeFile.size > 500000 
+            then Result.Err ("File too big (> 500K):" ++ nativeFile.name) |>  (\x -> (x :: errs, acts))
+            else (nativeFile.name, readAsTextFile nativeFile.blob) |> (\x -> (errs, x :: acts))
         parseFiles fileEvt = 
             case fileEvt of
-                Drop files -> List.foldl parseSingle ([], [])
+                Drop files -> List.foldl parseSingle ([], []) files
                 _ -> ([], [])
     in
         Signal.map parseFiles dropFileMbx.signal
         
-view : Signal.Address Action -> Model -> Html
+view : Signal.Address (DropZone.Action a) -> DropZone.Model -> Html
 view address model =
     div [ containerStyles ]
         [ h1 [] [ Html.text "Drag 'n Drop your GPX file below:" ]
-        , renderDropZone address (model.dropZone) -- render the dropzone
-        , div [] [Html.text (model.parsedGpx |> toString)]
+        , renderDropZone address model -- render the dropzone
+        , div [] [Html.text "Hello"]
         ]
-    
-main =
-    app.html
+        
+dropZoneStatusSg : Signal DropZone.Model
+dropZoneStatusSg = Signal.foldp DropZone.update DropZone.init dropFileMbx.signal
+       
+main = Signal.map (view dropFileMbx.address) dropZoneStatusSg
 
-dropZoneStatusSg : Signal DropZone.Model 
-
-renderDropZone :  Signal.Address Action -> DropZone.Model -> Html
+renderDropZone :  Signal.Address (DropZone.Action a) -> DropZone.Model -> Html
 renderDropZone address dropZoneModel =
   div
     (renderZoneAttributes address dropZoneModel)
     []
 
-renderZoneAttributes :  Signal.Address Action -> DropZone.Model -> List Html.Attribute
+renderZoneAttributes :  Signal.Address (DropZone.Action a) -> DropZone.Model -> List Html.Attribute
 renderZoneAttributes address dropZoneModel =
     ( if DropZone.isHovering dropZoneModel then
         dropZoneHover -- style the dropzone differently depending on whether the user is hovering
@@ -136,16 +144,6 @@ dropZoneHover =
 
 -- TASKS
 
-readTextFile : FileRef -> Effects Action
-readTextFile fileValue =
-    readAsTextFile fileValue
-        |> Task.toResult
-        |> Task.map FileData
-        |> Effects.task
-
-
-
-    
 gpxView mouseWheelIn screenSizeIn browserIn vehicleIn = 
     let
         mapNetSg = mapSg mouseWheelIn screenSizeIn Drag.mouseEvents mergedShadow

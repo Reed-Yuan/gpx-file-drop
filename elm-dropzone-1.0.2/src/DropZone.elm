@@ -1,6 +1,6 @@
 module DropZone
   ( Model
-  , Action(Drop)
+  , Action (..)
   , isHovering
   , init
   , update
