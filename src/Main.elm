@@ -45,7 +45,7 @@ txtOutMbx = Signal.mailbox []
 port txtOutTsk : Signal (Task a ())
 port txtOutTsk = 
     let
-        perf fileTsk = (Task.map snd fileTsk) `Task.andThen` (\x -> Signal.send txtOutMbx.address x)
+        perf fileTsk = (Task.map snd fileTsk) `Task.andThen` Signal.send txtOutMbx.address
     in
         Signal.map perf parseTxtSg
 
@@ -98,10 +98,8 @@ parseTasksSg =
 view : Signal.Address (DropZone.Action a) -> DropZone.Model -> Html
 view address model =
     div [ containerStyles ]
-        [ h1 [] [ Html.text "Drag 'n Drop your GPX file below:" ]
-        , renderDropZone address model -- render the dropzone
-        , div [] [Html.text "Hello"]
-        ]
+        [ h1 [] [ Html.text "Drag 'n Drop your GPX file in the box:" ]
+        , renderDropZone address model -- render the dropzone]
         
 dropZoneStatusSg : Signal DropZone.Model
 dropZoneStatusSg = Signal.foldp DropZone.update DropZone.init dropFileMbx.signal

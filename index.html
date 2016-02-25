@@ -81,7 +81,7 @@
                     var pt = seg_0[i]
                     var dt = new Date(pt.time[0]._text)
                     var rst = {"vehicleId": vehicleId, "vehicleName": vName, "lon": pt.lon._value, "lat": pt.lat._value, "timestamp": dt.getTime(), "speed":0, "direction":0};
-                    console.log(rst);
+                    //console.log(rst);
                     resultAry.push(rst);
                 }
                 return resultAry;
