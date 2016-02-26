@@ -94,55 +94,37 @@ parseTasksSg =
                 _ -> ([], [])
     in
         Signal.map parseFiles dropFileMbx.signal
-        
-view : Signal.Address (DropZone.Action a) -> DropZone.Model -> Html
-view address model =
-    div [ containerStyles ]
-        [ h1 [] [ Html.text "Drag 'n Drop your GPX file in the box:" ]
-        , renderDropZone address model -- render the dropzone]
-        
-dropZoneStatusSg : Signal DropZone.Model
-dropZoneStatusSg = Signal.foldp DropZone.update DropZone.init dropFileMbx.signal
-       
-main = Signal.map (view dropFileMbx.address) dropZoneStatusSg
 
-renderDropZone :  Signal.Address (DropZone.Action a) -> DropZone.Model -> Html
-renderDropZone address dropZoneModel =
-  div
-    (renderZoneAttributes address dropZoneModel)
-    []
-
-renderZoneAttributes :  Signal.Address (DropZone.Action a) -> DropZone.Model -> List Html.Attribute
-renderZoneAttributes address dropZoneModel =
-    ( if DropZone.isHovering dropZoneModel then
-        dropZoneHover -- style the dropzone differently depending on whether the user is hovering
-      else
-        dropZoneDefault          
-    )
-    ::
-    -- add the necessary DropZone event wiring 
-    dropZoneEventHandlers FileReader.parseDroppedFiles dropFileMbx.address
-
-containerStyles =
-    style [ ( "padding", "20px") ]
+type alias Model =
+    {
+        window_size: (Int, Int)
+        , time_span: (Time, Time)
+        , bound: (Float, Float)
+        , gpx : List TileMap.Gpsx
+    }
     
-dropZoneDefault =
-    style
-        [ ( "height", "120px")
-        , ( "border-radius", "10px")
-        , ( "border", "3px dashed steelblue")
-        ]
+main = Signal.Extra.switchWhen (Signal.map List.isEmpty vehicleIn) viewSgA gpxView
+    
+viewSgA = Signal.map2 initialView screenSizeIn dropZoneStatusSg
         
-dropZoneHover =
-    style
-        [ ( "height", "120px")
-        , ( "border-radius", "10px")
-        , ( "border", "3px dashed red")
-        ]
+initialView (w, h) dropFileModel = 
+    collage w h [
+        (layers [initMap w h, title, gitLink `below` spacer 1 (h - 60)]) |> toForm
+        , dropZoneView dropFileMbx.address dropFileModel |> Html.toElement 600 600 |> toForm]
 
--- TASKS
+gitLink =
+        let
+            a = Text.fromString "Source code @GitHub" |> Text.link "https://github.com/Reed-Yuan/geo-elm.git" |> Text.height 22 |> leftAligned
+            b = spacer 240 40 |> color white |> opacity 0.85
+        in
+            layers [b, (spacer 20 1) `beside` a `below` (spacer 1 10)]
+            
+title = Html.span [style [("color", "blue"), ("font-size", "xx-large")]] [Html.text "GPX Visualization with ELM: Drag'n Drop"] 
+        |> Html.toElement 700 60
+        
+initMap w h = TileMap.loadMap { size = (w, h), center = (38.847399, -101.009422), zoom = 5 }        
 
-gpxView mouseWheelIn screenSizeIn browserIn vehicleIn = 
+gpxView = 
     let
         mapNetSg = mapSg mouseWheelIn screenSizeIn Drag.mouseEvents mergedShadow
         dataSg = Signal.map4 (\gps mapp startTime timeDelta -> List.map3 (\x y z -> Data.augGps x y z mapp startTime timeDelta) gps global_colors global_icons) 
@@ -157,7 +139,7 @@ hideCtlSg =
     in
         Signal.Extra.zip hideVehiclesSg hideInfoSg
     
-render : TileMap.Map -> VideoOptions -> List Data.VehiclTrace -> VehicleOptions -> (Bool, Bool) -> Bool -> String -> Form
+render : TileMap.Map -> VideoOptions -> List Data.VehiclTrace -> VehicleOptions -> (Bool, Bool) -> Bool -> String -> Element
 render  mapp videoOptions data vehicleOptions (hideVehicles, hideInfo) showWarn browserType = 
     let
         w = mapp.size |> fst
@@ -220,16 +202,46 @@ render  mapp videoOptions data vehicleOptions (hideVehicles, hideInfo) showWarn 
             in 
                 view |> toForm |> move (100 - (toFloat w)/2, if hideVehicles then 360 else 40)
                 
-        gitLink =
-                let
-                    a = Text.fromString "Source code @GitHub" |> Text.link "https://github.com/Reed-Yuan/geo-elm.git" |> Text.height 22 |> leftAligned
-                    b = spacer 240 40 |> color white |> opacity 0.85
-                in
-                    layers [b, (spacer 20 1) `beside` a `below` (spacer 1 10)] |> toForm |> move (140 - (toFloat w)/2, 45 - (toFloat h)/2)
-                    
-        title = Html.span [style [("color", "blue"), ("font-size", "xx-large")]] [Html.text "GPS Visualization with ELM: 5 Vehicles in 24 Hours"] 
-                |> Html.toElement 700 60 |> toForm |> move (380 - (toFloat w)/2,  (toFloat h)/2 - 40)
     in
-        group [toForm baseMap |> alpha malpha, fullTrace, vehicleTrace, 
-            title, anologClock_, digitClock_, popA, progressBar_, vehicleStateView_, vehicleInfo ,gitLink]
+        collage w h [toForm baseMap |> alpha malpha, fullTrace, vehicleTrace, 
+             anologClock_, digitClock_, popA, progressBar_, vehicleStateView_, vehicleInfo]
+
         
+dropZoneStatusSg : Signal DropZone.Model
+dropZoneStatusSg = Signal.foldp DropZone.update DropZone.init dropFileMbx.signal
+
+dropZoneView :  Signal.Address (DropZone.Action a) -> DropZone.Model -> Html
+dropZoneView address dropZoneModel =
+  div
+    (renderZoneAttributes address dropZoneModel)
+    [h1 [] [ Html.text "Drop a valid GPX file in this box" ]]
+
+renderZoneAttributes :  Signal.Address (DropZone.Action a) -> DropZone.Model -> List Html.Attribute
+renderZoneAttributes address dropZoneModel =
+    ( if DropZone.isHovering dropZoneModel then
+        dropZoneHover -- style the dropzone differently depending on whether the user is hovering
+      else
+        dropZoneDefault          
+    )
+    ::
+    -- add the necessary DropZone event wiring 
+    dropZoneEventHandlers FileReader.parseDroppedFiles dropFileMbx.address
+
+dropZoneDefault =
+    style
+        [ ( "height", "80px")
+        , ( "border-radius", "10px")
+        , ( "color", "green")
+        , ( "border", "6px dashed green")
+        , ("padding", "180px 40px 180px 60px")
+        ]
+        
+dropZoneHover =
+    style
+        [ ( "height", "80px")
+        , ( "border-radius", "10px")
+        , ( "color", "red")
+        , ( "border", "6px dashed red")
+        , ("padding", "180px 40px 180px 60px")
+        ]
+            

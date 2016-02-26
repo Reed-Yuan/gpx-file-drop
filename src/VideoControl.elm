@@ -30,8 +30,8 @@ import DragR exposing (..)
 import Widget
 import MapControl exposing (..)
 
-global_t0 = Utils.timeFromString "2016-01-11T00:00:00"
-global_t1 = Utils.timeFromString "2016-01-12T00:00:00"
+global_t0 = Utils.timeFromString "2015-01-07T00:00:00"
+global_t1 = Utils.timeFromString "2015-01-08T00:00:00"
 
 type VideoStatus = Play | Pause | Stop
     
