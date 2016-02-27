@@ -33,8 +33,8 @@ timelyTrace gpx t tcLength mapp colr icn =
     let
         trace' = List.filter (\g -> g.timestamp < t && t - g.timestamp <= toFloat tcLength * 60000) gpx.gpx |> List.reverse
         emptyForm = Graphics.Element.empty  |> toForm
-        latLons = List.map (\x -> showLatLon x (toCssString Color.blue)) trace' |> List.concat
-                    |> div [style [("overflow-y", "scroll"), ("height", "570px"), ("width", "160px"), ("color", (toCssString colr))]]
+        latLons = List.map (\x -> showLatLon x (toCssString colr)) trace' |> List.concat
+                    |> div [style [("overflow-y", "scroll"), ("height", "570px"), ("width", "160px")]]
                     
         latLons' = div [style [("background-color", "rgba(255, 255, 255, 0.85)"), ("padding", "20px 10px 10px 20px")]]
                     (Html.span [style [("font-weight", "bold"), ("font-size", "large"), ("color", "black")]] [Html.text "Tail Points"]
@@ -43,16 +43,16 @@ timelyTrace gpx t tcLength mapp colr icn =
             Just g -> 
                 let
                     (x, y) = TileMap.proj (g.lat, g.lon) mapp
-                    p =  (icn Color.darkGreen 24) |> Html.toElement 24 24 |> toForm |> move (x, y)
+                    p =  (icn colr 24) |> Html.toElement 24 24 |> toForm |> move (x, y)
                     n = g.vehicleName |> Text.fromString 
-                        |> outlinedText {defaultLine | width = 1, color = Color.darkGreen} 
+                        |> outlinedText {defaultLine | width = 1, color = colr} 
                         |> move (x + 40, y + 20)
                 in 
                     Graphics.Collage.group [p, n]
             _ -> emptyForm
         hstE = 
             if tcLength == 0 then emptyForm
-            else TileMap.path trace' mapp {defaultLine | color = Color.red, width = 2}
+            else TileMap.path trace' mapp {defaultLine | color = Color.darkGreen, width = 2}
     in 
         (Graphics.Collage.group [hstE, head], latLons')
 

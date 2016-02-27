@@ -139,8 +139,8 @@ initMap w h = TileMap.loadMap { size = (w, h), center = (38.847399, -101.009422)
 
 gpxView = 
     let
-        mapNetSg = mapSg mouseWheelIn screenSizeIn Drag.mouseEvents mergedShadow
-        dataSg = Signal.map2 (\gps mapp -> let gps' = List.head gps in (gps', Data.fullTrace gps' Color.blue mapp)) vehicleIn mapNetSg
+        mapNetSg = mapSg mouseWheelIn screenSizeIn Drag.mouseEvents mergedShadow vehicleIn
+        dataSg = Signal.map2 (\gps mapp -> let gps' = List.head gps in (gps', Data.fullTrace gps' Color.red mapp)) vehicleIn mapNetSg
         videoOptionSg = VideoControl.videoOption startTimeSg timeDeltaSg
     in
         Signal.map3 (\x y z -> x y z) (Signal.map5 render mapNetSg videoOptionSg dataSg vehicleOptionsSg hideCtlSg) showWarnMbx.signal browserIn
@@ -180,7 +180,7 @@ render  mapp videoOptions (data_, fullTrace) vehicleOptions (hideVehicles, hideI
                 digitClock_ = videoOptions.digitClock |> toForm |> move ((toFloat w)/2 - 100, (toFloat h)/2 - 50)
                 progressBar_ = videoOptions.progressBar |> toForm |> move (0, 40 - (toFloat h)/2)
 
-                traceWithInfo = Data.timelyTrace data videoOptions.time tl mapp Color.red FontAwesome.reddit_alien
+                traceWithInfo = Data.timelyTrace data videoOptions.time tl mapp Color.blue FontAwesome.reddit_alien
                 
                 gpxInfo = Data.showInfo data (Utils.toCssString Color.blue) |> Html.toElement 160 240
                 
@@ -209,7 +209,7 @@ render  mapp videoOptions (data_, fullTrace) vehicleOptions (hideVehicles, hideI
                                      |> Graphics.Input.clickable (Signal.message hideVehiclesMbx.address ())
                         view = (if hideVehicles then switch else switch `above` vehicleStateView)
                     in 
-                        view |> toForm |> move (100 - (toFloat w)/2, if hideVehicles then 360 else 40)
+                        view |> toForm |> move (100 - (toFloat w)/2, if hideVehicles then 340 else 40)
                         
             in
                 collage w h [toForm baseMap |> alpha malpha, fullTrace |> alpha talpha, (fst traceWithInfo), 
