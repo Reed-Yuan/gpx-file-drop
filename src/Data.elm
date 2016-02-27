@@ -1,8 +1,6 @@
 module Data where
 
 import List
-import Signal
-import String
 import Color exposing (..)
 import Graphics.Collage exposing (..)
 import Graphics.Element exposing (..)
@@ -14,62 +12,76 @@ import TileMap
 import Text
 import Time exposing (..)
 
-type alias VehiclTrace = (Int, String, Color, Form, Form, List TileMap.Gpsx)
+type alias Gpx = 
+    {
+        id: Int
+        , name: String
+        , gpx: List TileMap.Gpsx
+        , bbox_topLeft: (Float, Float)
+        , bbox_bottomRight: (Float, Float)
+        , timeSpan: (Time, Time)
+    }
 
-augGps : List TileMap.Gpsx -> Color 
-            -> (Color -> Int -> Html) -> TileMap.Map -> Time -> Float -> VehiclTrace
-augGps gpsx colr icn mapp startTime timeDelta =
-    let 
-        emptyForm = toForm empty
-        process x = if List.isEmpty x then (-1, "", Color.red, Graphics.Element.empty  |> toForm, emptyForm, []) else
-                        case List.head x of
-                            Just gps -> 
-                                let
-                                    inTimeRange g = g.timestamp >= startTime && g.timestamp < startTime + (timeDelta) * 3600000
-                                    sortedGps = x |> (List.filter inTimeRange) |> (List.sortBy .timestamp)
-                                    fullTrace = TileMap.path2 sortedGps mapp {defaultLine | color = colr, width = 10}
-                                in
-                                    (gps.vehicleId, gps.vehicleName, colr, (icn colr 24) |> Html.toElement 24 24 |> toForm, fullTrace, sortedGps) 
-                            _ -> (-1, "", Color.red, Graphics.Element.empty  |> toForm, emptyForm, [])
-    in
-        process gpsx
+fullTrace : Maybe Gpx -> Color -> TileMap.Map -> Form
+fullTrace gpsx colr mapp = 
+    case gpsx of
+        Just gpsx' -> TileMap.path2 gpsx'.gpx mapp {defaultLine | color = colr, width = 10}
+        _ -> Graphics.Collage.toForm empty
 
-showTrace: VehiclTrace -> Time -> Int -> TileMap.Map -> (Form, Element)
-showTrace (_, vname, colr, icn, _, gps) t tcLength mapp = 
+timelyTrace: Gpx -> Time -> Int -> TileMap.Map -> Color -> (Color -> Int -> Html) -> (Form, Element)
+timelyTrace gpx t tcLength mapp colr icn = 
     let
-        trace = List.filter (\g -> g.timestamp < t && t - g.timestamp <= (if tcLength == 0 then 24 else tcLength) * 60000) gps |> List.reverse
+        vehicleInfo = showInfo gpx (toCssString Color.blue) |> Html.toElement 160 160
+        trace' = List.filter (\g -> g.timestamp < t && t - g.timestamp <= (if tcLength == 0 then 24 else tcLength) * 60000) gpx.gpx |> List.reverse
         emptyForm = Graphics.Element.empty  |> toForm
-        head = case (List.head trace) of
+        head = case (List.head trace') of
             Just g -> 
                 let
                     (x, y) = TileMap.proj (g.lat, g.lon) mapp
-                    p = move (x, y) icn
-                    n = vname |> Text.fromString 
-                        |> outlinedText {defaultLine | width = 1, color = colr} 
+                    p =  (icn Color.blue 24) |> Html.toElement 24 24 |> toForm |> move (x, y)
+                    n = g.vehicleName |> Text.fromString 
+                        |> outlinedText {defaultLine | width = 1, color = Color.blue} 
                         |> move (x + 40, y + 20)
+                    latLon = showLatLon g (toCssString Color.blue) |> Html.toElement 160 160
                 in 
-                    (Graphics.Collage.group [p, n], showInfo g (toCssString colr))
-            _ -> (emptyForm, Graphics.Element.empty)
+                    (Graphics.Collage.group [p, n], vehicleInfo `above` latLon)
+            _ -> (emptyForm, vehicleInfo)
         hstE = 
             if tcLength == 0 then emptyForm
-            else TileMap.path trace mapp {defaultLine | color = colr, width = 2}
+            else TileMap.path trace' mapp {defaultLine | color = Color.green, width = 2}
     in 
-        (Graphics.Collage.group [fst head, hstE], snd head)
+        (Graphics.Collage.group [hstE, fst head], snd head)
 
+txt str colorr = Html.span [style [("font-size", "large"), ("color", colorr)]] [Html.text str]
+
+showInfo : Gpx -> String -> Html
 showInfo g colorr = 
-  (div [style [("padding-left", "20px"), ("color", colorr), ("background-color", "rgba(255, 255, 255, 0.85)")]] <|
-        Html.span [style [("font-size", "large"), ("font-weight", "bold"), ("color", toString colorr)]] [Html.text g.vehicleName]
-        :: br [] []
-        :: br [] []
-        :: Html.span [style [("font-size", "large"), ("color", colorr)]] [Html.text ("Time: " ++ timeToString g.timestamp)]
-        :: br [] []
-        :: Html.span [style [("font-size", "large"), ("color", colorr)]] [Html.text ("Lat: " ++ toString g.lat)]
-        :: br [] []
-        :: Html.span [style [("font-size", "large"), ("color", colorr)]] [Html.text ("Lon: " ++ toString g.lon)]
-        :: br [] []
-        :: Html.span [style [("font-size", "large"), ("color", colorr)]] [Html.text ("Speed: " ++ toString g.speed)]
-        :: br [] []
-        :: [Html.span [style [("font-size", "large"), ("color", colorr)]] [Html.text ("Direction: " ++ toString g.direction)]]
-        )
-    |> (Html.toElement 160 160)
+      (div [style [("padding-left", "20px"), ("color", colorr), ("background-color", "rgba(255, 255, 255, 0.85)")]] <|
+            txt g.name colorr
+            :: br [] []
+            :: br [] []
+            :: txt ("Start Time: " ) colorr
+            :: br [] []
+            :: txt ("Lat: ") colorr
+            :: br [] []
+            :: txt ("End Time: ") colorr
+            :: br [] []
+            :: txt ("Speed: ") colorr
+            :: br [] []
+            :: [br [] []]
+            )
+
+showLatLon : TileMap.Gpsx -> String -> Html
+showLatLon g colorr = 
+      (div [style [("padding-left", "20px"), ("color", colorr), ("background-color", "rgba(255, 255, 255, 0.85)")]] <|
+            txt "Current" colorr
+            :: br [] []
+            :: br [] []
+            :: txt ("Time: " ++ timeToString g.timestamp) colorr
+            :: br [] []
+            :: txt ("Lat: " ++ toString g.lat) colorr
+            :: br [] []
+            :: [txt ("Lon: " ++ toString g.lon) colorr]
+            )
+        --|> (Html.toElement 160 160)
         

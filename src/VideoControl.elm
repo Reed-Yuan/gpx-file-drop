@@ -30,13 +30,10 @@ import DragR exposing (..)
 import Widget
 import MapControl exposing (..)
 
-global_t0 = Utils.timeFromString "2015-01-07T00:00:00"
-global_t1 = Utils.timeFromString "2015-01-08T00:00:00"
-
 type VideoStatus = Play | Pause | Stop
     
 videoOps : Signal.Mailbox VideoStatus
-videoOps = Signal.mailbox Play
+videoOps = Signal.mailbox Stop
         
 realClock = 
     let
@@ -49,7 +46,7 @@ realClock =
     in
         Signal.foldp tick 0 (Signal.Extra.zip (Time.fps 20) videoOps.signal)
         
-clock = 
+clock startTimeSg timeDeltaSg = 
     let
         tick =
             let
@@ -58,15 +55,15 @@ clock =
                         progress = 
                             case msEvt of
                                 Moved dx _ -> 
-                                    (Basics.max (progress_ + ((toFloat dx) / 800) * td0 * 3600000) st0)
-                                    |> Basics.min (st0 + 3600000 * td0)
+                                    (Basics.max (progress_ + ((toFloat dx) / 800) * td0) st0)
+                                    |> Basics.min (st0 + td0)
                                 _ -> if clk == 0 || progress_ == 0 then st0 else animate (clk - clockTag_) animation_
 
                         anime =
                            case msEvt of
                                Moved _ _ -> animation_ |> from progress
                                _ -> (if clk == 0 || progress_ == 0
-                                    then animation_ |> from st0 |> to (st0 + 3600000 * td0) |> speed speedd
+                                    then animation_ |> from st0 |> to (st0 + td0) |> speed speedd
                                     else if speedd == speed_
                                     then animation_
                                     else animation_ |> from progress |> speed speedd )
@@ -85,7 +82,8 @@ clock =
     in
         tick |> Signal.map (\(x, _, _, _) -> x)
 
-videoRewindTaskSg = Signal.map3 (\t1 t2 td -> if t1 >= t2 + 3600000 * td then Signal.send videoOps.address Stop else Task.succeed ()) clock startTimeSg timeDeltaSg
+videoRewindTaskSg startTimeSg timeDeltaSg = Signal.map3 (\t1 t2 td -> if t1 >= t2 + td then Signal.send videoOps.address Stop else Task.succeed ()) 
+                                            (clock startTimeSg timeDeltaSg) startTimeSg timeDeltaSg
 
 forwardFlow: Signal.Mailbox Bool
 forwardFlow = Signal.mailbox False
@@ -94,7 +92,7 @@ mouseEvt = dragEvents forwardFlow.signal (Signal.map (\s -> s /= Stop) videoOps.
 
 progressArea = spacer 440 30 |> Graphics.Input.hoverable (Signal.message forwardFlow.address)
 
-videoControlSg =
+videoControlSg startTimeSg timeDeltaSg =
     let
         wth = 580
         drawControls videoStatus = 
@@ -111,7 +109,7 @@ videoControlSg =
         drawProgress  t t0 td =
             let
                 darkBar = segment (0,0) (400, 0) |> traced { defaultLine | width = 10, color = darkGrey } |> moveX -210
-                p = (t - t0) / (td * 3600000) * 400 
+                p = (t - t0) / (td) * 400 
                 progress = segment (0,0) (p, 0) |> traced { defaultLine | width = 10, color = red } |> moveX -210
             in
                 layers [collage 440 10 [darkBar, progress] `below` spacer 1 10, progressArea]
@@ -120,9 +118,9 @@ videoControlSg =
         drawCtlAndPrgs videoStatus t t0 td = layers [spacer wth 30 |> color white |> opacity 0.85 
                        , spacer 40 10 `beside` (drawControls videoStatus) `beside` spacer 10 10 `beside` (drawProgress t t0 td)]        
     in 
-        Signal.map4 drawCtlAndPrgs videoOps.signal clock startTimeSg timeDeltaSg
+        Signal.map4 drawCtlAndPrgs videoOps.signal (clock startTimeSg timeDeltaSg) startTimeSg timeDeltaSg
 
-analogClockSg = 
+analogClockSg startTimeSg timeDeltaSg = 
     let
         analogClock t = 
             let
@@ -133,9 +131,9 @@ analogClockSg =
             in
                Graphics.Collage.group [face, outline_, hand_mm, hand_hh]
     in
-        Signal.map analogClock clock
+        Signal.map analogClock (clock startTimeSg timeDeltaSg)
         
-digitalClockSg = 
+digitalClockSg startTimeSg timeDeltaSg = 
     let
         digitalClock t = 
             let
@@ -143,35 +141,7 @@ digitalClockSg =
             in
                layers [spacer 160 40 |> color white |> opacity 0.85, spacer 15 1 `beside` dTxt]
     in
-        Signal.map digitalClock clock
-        
-startTimeCtlSg = 
-    let
-        (sliderSg, shadowFlow) = Widget.slider "startTime" 100 0.25 False (Signal.map ((==) Stop) videoOps.signal)
-        f (slider_, pct) =
-            let
-                t =  ((pct * 23 |> round) * 3600000) |> toFloat |> (+) global_t0
-                title = Html.span [style [("padding-left", "10px"),("font-weight", "bold"),("font-size", "large")]]
-                            [Html.text ("From: " ++ timeToString t)] |> Html.toElement 160 30
-                wrappedSlider = layers [spacer 20 1 `beside` slider_ `below` title]
-            in
-                (wrappedSlider, t)
-    in
-        (Signal.map f sliderSg, shadowFlow)
-
-timeSpanCtlSg = 
-    let
-        (sliderSg, shadowFlow) = Widget.slider "timeDelta" 100 0.15 False (Signal.map ((==) Stop) videoOps.signal)
-        f (slider_, pct) =
-            let
-                t =  pct * 23 |> round |> (+) 1
-                title = Html.span [style [("padding-left", "10px"),("font-weight", "bold"),("font-size", "large")]] 
-                            [Html.text ("Span: " ++ (toString t) ++ (if t == 1 then " hour" else " hours"))]|> Html.toElement 160 30
-                wrappedSlider = layers [spacer 20 1 `beside` slider_ `below` title]
-            in
-                (wrappedSlider, t)
-    in
-        (Signal.map f sliderSg, shadowFlow)
+        Signal.map digitalClock (clock startTimeSg timeDeltaSg)
 
 speedCtlSg = 
     let
@@ -187,10 +157,8 @@ speedCtlSg =
     in
         (Signal.map f sliderSg, shadowFlow)
         
-startTimeSg = Signal.map (\( _, t) -> t) (fst startTimeCtlSg)
-timeDeltaSg = Signal.map (\( _, t) -> toFloat t) (fst timeSpanCtlSg)
 speedSg = Signal.map (\( _, t) -> toFloat t) (fst speedCtlSg)
-shadowSg = Signal.mergeMany [snd startTimeCtlSg, snd timeSpanCtlSg, snd speedCtlSg, forwardFlow.signal]
+shadowSg = Signal.mergeMany [snd speedCtlSg, forwardFlow.signal]
 
 type alias VideoOptions =
     {
@@ -198,15 +166,10 @@ type alias VideoOptions =
         progressBar: Element,
         anologClock: Form,
         digitClock: Element,
-        startTimeCtl: (Element, Float),
-        timeDeltaCtl: (Element, Int),
         speedCtl: (Element, Int)
     }
 
-videoOptionSg =
-    let
-        videoSg_ = Signal.map5 VideoOptions clock videoControlSg analogClockSg digitalClockSg (fst startTimeCtlSg)
-    in
-        Signal.map3 (\x y z -> x y z) videoSg_ (fst timeSpanCtlSg) (fst speedCtlSg)
-        
-        
+videoOption startTimeSg timeDeltaSg = Signal.map5 VideoOptions (clock startTimeSg timeDeltaSg)
+                                        (videoControlSg startTimeSg timeDeltaSg) 
+                                        (analogClockSg startTimeSg timeDeltaSg)
+                                        (digitalClockSg startTimeSg timeDeltaSg) (fst speedCtlSg)

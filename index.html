@@ -58,12 +58,12 @@
             if (0 === param.length) return;
             var rs = [];
             for (var i = 0; i < param.length; i++) {
-                rs.push(proc(2012347, param[i][0], param[i][1]));
+                rs.push(proc(i, param[i][0], param[i][1]));
             }
             elmCtx.ports.vehicleIn.send(rs);
             return;
             
-            function proc(vehicleId, vehicleName, gpx) {
+            function proc(vehicleId, vehicleName_, gpx) {
                 if (gpx === "") return [];
                 
                 var myOptions = {
@@ -74,17 +74,26 @@
                 }
                 
                 var raw = xmlToJSON.parseString(gpx, myOptions);
+                var vehicleName = vehicleName_.replace(".gpx", "");
                 var vName = vehicleName.length > 10 ? vehicleName.substring(0, 10) + "..." : vehicleName;
                 var seg_0 = raw.gpx[0].trk[0].trkseg[0].trkpt;
                 var resultAry = [];
+                var minTime = Number.MAX_VALUE, maxTime = 0, minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
                 for (var i = 0; i < seg_0.length; i++) {
                     var pt = seg_0[i]
-                    var dt = new Date(pt.time[0]._text)
-                    var rst = {"vehicleId": vehicleId, "vehicleName": vName, "lon": pt.lon._value, "lat": pt.lat._value, "timestamp": dt.getTime(), "speed":0, "direction":0};
+                    var dt = new Date(pt.time[0]._text).getTime()
+                    minTime = Math.min(minTime, dt);
+                    maxTime = Math.max(maxTime, dt);
+                    minLat = Math.min(minLat, pt.lat._value);
+                    maxLat = Math.max(maxLat, pt.lat._value);
+                    minLon = Math.min(minLon, pt.lon._value);
+                    maxLon = Math.max(maxLon, pt.lon._value);
+                    var rst = {"vehicleId": vehicleId, "vehicleName": vName, "lon": pt.lon._value, "lat": pt.lat._value, "timestamp": dt, "speed":0, "direction":0};
                     //console.log(rst);
                     resultAry.push(rst);
                 }
-                return resultAry;
+                return {"id": vehicleId, "name": vehicleName, "gpx": resultAry, "bbox_topLeft": [maxLon, maxLat]
+                        , "bbox_bottomRight": [minLon, minLat], "timeSpan":[minTime, maxTime]};
             }
         }
     </script>  
