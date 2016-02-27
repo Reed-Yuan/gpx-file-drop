@@ -93,7 +93,7 @@
                     //console.log(rst);
                     resultAry.push(rst);
                 }
-                return {"id": vehicleId, "name": vehicleName, "gpx": resultAry, "bbox_topLeft": [maxLon, maxLat]
+                return {"id": vehicleId, "name": vName, "gpx": resultAry, "bbox_topLeft": [maxLon, maxLat]
                         , "bbox_bottomRight": [minLon, minLat], "timeSpan":[minTime, maxTime]};
             }
         }

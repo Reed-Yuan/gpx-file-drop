@@ -127,7 +127,7 @@ initialView (w, h) dropFileModel =
 
 gitLink =
         let
-            a = Text.fromString "Source code @GitHub" |> Text.link "https://github.com/Reed-Yuan/geo-elm.git" |> Text.height 22 |> leftAligned
+            a = Text.fromString "Source code @GitHub" |> Text.link "https://github.com/Reed-Yuan/gpx-file-drop" |> Text.height 22 |> leftAligned
             b = spacer 240 40 |> color white |> opacity 0.85
         in
             layers [b, (spacer 20 1) `beside` a `below` (spacer 1 10)]

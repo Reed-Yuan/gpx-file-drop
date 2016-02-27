@@ -36,12 +36,9 @@ ops mouseWheelIn screenSizeIn mouseEvt shadowSg dataInSg =
                 changed lst = 
                     case List.head lst of
                     Just gpx ->
-                        let
-                            x0 = (fst gpx.bbox_topLeft - fst gpx.bbox_bottomRight)/2 + fst gpx.bbox_bottomRight
-                            y0 = (snd gpx.bbox_topLeft - snd gpx.bbox_bottomRight)/2 + snd gpx.bbox_bottomRight
-                            d = Debug.log "(x0, y0)" (x0, y0)
-                        in
-                            Center (y0, x0)
+                        case List.head gpx.gpx of
+                            Just gps -> Center (gps.lat, gps.lon)
+                            _ -> NoOp
                     _ -> NoOp
             in        
                 Signal.map changed (Signal.dropRepeats dataInSg )
