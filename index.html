@@ -58,13 +58,14 @@
             if (0 === param.length) return;
             var rs = [];
             for (var i = 0; i < param.length; i++) {
-                rs.push(proc(i, param[i][0], param[i][1]));
+                var parsed = proc(i, param[i][0], param[i][1]);
+                if (parsed) rs.push(parsed);
             }
             elmCtx.ports.vehicleIn.send(rs);
             return;
             
             function proc(vehicleId, vehicleName_, gpx) {
-                if (gpx === "") return [];
+                if (gpx === "") return null;
                 
                 var myOptions = {
                     mergeCDATA: false,

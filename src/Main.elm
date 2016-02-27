@@ -75,8 +75,8 @@ timeDeltaSg =
     in
         Signal.map getTimeSpan vehicleIn
 
-port runner : Signal (Task x ())
-port runner = VideoControl.videoRewindTaskSg startTimeSg timeDeltaSg
+--port runner : Signal (Task x ())
+--port runner = VideoControl.videoRewindTaskSg startTimeSg timeDeltaSg
 
 shadowFlow : Signal.Mailbox Bool
 shadowFlow = Signal.mailbox False
@@ -140,7 +140,7 @@ initMap w h = TileMap.loadMap { size = (w, h), center = (38.847399, -101.009422)
 gpxView = 
     let
         mapNetSg = mapSg mouseWheelIn screenSizeIn Drag.mouseEvents mergedShadow
-        dataSg = Signal.map2 (\gps mapp -> let gps' = List.head gps in (gps', Data.fullTrace gps' Color.red mapp)) vehicleIn mapNetSg
+        dataSg = Signal.map2 (\gps mapp -> let gps' = List.head gps in (gps', Data.fullTrace gps' Color.blue mapp)) vehicleIn mapNetSg
         videoOptionSg = VideoControl.videoOption startTimeSg timeDeltaSg
     in
         Signal.map3 (\x y z -> x y z) (Signal.map5 render mapNetSg videoOptionSg dataSg vehicleOptionsSg hideCtlSg) showWarnMbx.signal browserIn
@@ -182,25 +182,27 @@ render  mapp videoOptions (data_, fullTrace) vehicleOptions (hideVehicles, hideI
 
                 traceWithInfo = Data.timelyTrace data videoOptions.time tl mapp Color.red FontAwesome.reddit_alien
                 
+                gpxInfo = Data.showInfo data (Utils.toCssString Color.blue) |> Html.toElement 160 240
+                
                 vehicleInfo =
                     let
                         icn = (if hideInfo then FontAwesome.arrow_down white 20 else FontAwesome.arrow_up white 20) |> Html.toElement 20 20
-                        switch = layers [spacer 160 20 |> color grey |> Graphics.Element.opacity 0.5, spacer 70 20 `beside` icn]  
+                        switch = layers [spacer 180 20 |> color grey |> Graphics.Element.opacity 0.5, spacer 70 20 `beside` icn]  
                                      |> Graphics.Input.clickable (Signal.message hideInfoMbx.address ())
                         info_ = (snd traceWithInfo) 
-                                |> container 160 500 (midTopAt (absolute 80) (absolute 0))
                                 
                         view = (if hideInfo then switch else switch `above` info_)
                    in
-                        view |> toForm |> move ((toFloat w)/2 - 100, if hideInfo then 380 else -20)
+                        view |> toForm |> move ((toFloat w)/2 - 100, if hideInfo then 350 else 20)
                 vehicleStateView_ = 
                     let
-                        bck = spacer 160 340 |> color white |> opacity 0.85
+                        bck = spacer 160 600 |> color white |> opacity 0.85
                         vehicleStateView = layers [bck, 
                                             mapAlpha `below` (spacer 1 10) 
                                             `below` tailLength `below` (spacer 1 10) 
                                             `below` traceAlpha `below` (spacer 1 10)
-                                            `below` (fst videoOptions.speedCtl) `below` (spacer 1 40)
+                                            `below` (fst videoOptions.speedCtl) `below` (spacer 1 20)
+                                            `below` gpxInfo `below` (spacer 1 20)
                                             ]
                         icn = (if hideVehicles then FontAwesome.arrow_down white 20 else FontAwesome.arrow_up white 20) |> Html.toElement 20 20
                         switch = layers [spacer 160 20 |> color grey |> Graphics.Element.opacity 0.5, spacer 70 20 `beside` icn]  
@@ -211,7 +213,9 @@ render  mapp videoOptions (data_, fullTrace) vehicleOptions (hideVehicles, hideI
                         
             in
                 collage w h [toForm baseMap |> alpha malpha, fullTrace |> alpha talpha, (fst traceWithInfo), 
-                     anologClock_, digitClock_, popA, progressBar_, vehicleStateView_, vehicleInfo, title |> toForm, gitLink |> toForm]
+                     anologClock_, digitClock_, popA, progressBar_, vehicleStateView_, 
+                     vehicleInfo, title |> toForm |> move (380 - (toFloat w)/2,  (toFloat h)/2 - 40), 
+                     gitLink |> toForm |> move (140 - (toFloat w)/2, 45 - (toFloat h)/2)]
         _ -> Graphics.Element.empty
         
 dropZoneStatusSg : Signal DropZone.Model

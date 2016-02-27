@@ -25,7 +25,7 @@ type alias VehicleOptions =
         
 traceAlphaSg = 
     let
-        (sliderSg, shadowFlow) = Widget.slider "traceAlpha" 100 0.1 False (Signal.constant True)
+        (sliderSg, shadowFlow) = Widget.slider "traceAlpha" 100 0.3 False (Signal.constant True)
         wrap (slider_, pct) = 
             let
                 pct_ = Exts.Float.roundTo 2 pct
@@ -56,7 +56,7 @@ tailSg =
         (sliderSg, shadowFlow) = Widget.slider "tailLength" 100 0.5 False (Signal.constant True)
         wrap (slider_, pct) = 
             let
-                pct_ = (Exts.Float.roundTo 2 pct) * 120 |> round
+                pct_ = (Exts.Float.roundTo 2 pct) * 60 |> round
                 pct__ = pct_ - (pct_ % 5)
                 title = Html.span [style [("padding-left", "10px"),("font-weight", "bold"),("font-size", "large")]] 
                         [Html.text ("Tail: " ++ (toString pct__) ++ " minutes")] |> Html.toElement 160 30

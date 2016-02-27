@@ -82,8 +82,8 @@ clock startTimeSg timeDeltaSg =
     in
         tick |> Signal.map (\(x, _, _, _) -> x)
 
-videoRewindTaskSg startTimeSg timeDeltaSg = Signal.map3 (\t1 t2 td -> if t1 >= t2 + td then Signal.send videoOps.address Stop else Task.succeed ()) 
-                                            (clock startTimeSg timeDeltaSg) startTimeSg timeDeltaSg
+--videoRewindTaskSg startTimeSg timeDeltaSg = Signal.map3 (\t1 t2 td -> if t1 >= t2 + td then Signal.send videoOps.address Stop else Task.succeed ()) 
+--                                            (clock startTimeSg timeDeltaSg) startTimeSg timeDeltaSg
 
 forwardFlow: Signal.Mailbox Bool
 forwardFlow = Signal.mailbox False
@@ -145,7 +145,7 @@ digitalClockSg startTimeSg timeDeltaSg =
 
 speedCtlSg = 
     let
-        (sliderSg, shadowFlow) = Widget.slider "timeDelta" 100 0.6 False (Signal.constant True)
+        (sliderSg, shadowFlow) = Widget.slider "timeDelta" 100 0.4 False (Signal.constant True)
         f (slider_, pct) =
             let
                 t = pct * 8 |> round |> (+) 3 |> (Bitwise.shiftLeft) 1

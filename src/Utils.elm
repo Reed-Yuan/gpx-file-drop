@@ -24,7 +24,10 @@ timeFromString str =
         else t + global_tzone
         
 timeToString : Float -> String
-timeToString t = Date.fromTime (t - global_tzone) |> Date.Format.format Date.Config.Config_en_us.config "%H:%M:%S"
+timeToString t = Date.fromTime t |> Date.Format.formatUtc Date.Config.Config_en_us.config "%H:%M:%S"
+        
+dateTimeToString : Float -> String
+dateTimeToString t = Date.fromTime t |> Date.Format.formatUtc Date.Config.Config_en_us.config "%Y-%m-%d %H:%M:%S UTC"
 
 toCssString : Color -> String
 toCssString cl =
