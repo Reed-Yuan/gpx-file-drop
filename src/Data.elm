@@ -31,10 +31,16 @@ fullTrace gpsx colr mapp =
 timelyTrace: Gpx -> Time -> Int -> TileMap.Map -> Color -> (Color -> Int -> Html) -> (Form, Element)
 timelyTrace gpx t tcLength mapp colr icn = 
     let
-        trace' = List.filter (\g -> g.timestamp < t && t - g.timestamp <= toFloat tcLength * 60000) gpx.gpx |> List.reverse
+        trace' = List.filter (\g -> g.timestamp < t && t - g.timestamp <= (if tcLength == 0 then 24 else tcLength) * 60000) gpx.gpx |> List.reverse
         emptyForm = Graphics.Element.empty  |> toForm
-        latLons = List.map (\x -> showLatLon x (toCssString colr)) trace' |> List.concat
-                    |> div [style [("overflow-y", "scroll"), ("height", "570px"), ("width", "160px")]]
+        latLons = if tcLength == 0 
+                    then
+                        case List.head trace' of
+                            Just x -> showLatLon x (toCssString colr) |> div [style [("overflow-y", "scroll"), ("height", "570px"), ("width", "160px")]]
+                            _ -> div [style [("overflow-y", "scroll"), ("height", "570px"), ("width", "160px")]] []
+                    else
+                        List.map (\x -> showLatLon x (toCssString colr)) trace' |> List.concat
+                        |> div [style [("overflow-y", "scroll"), ("height", "570px"), ("width", "160px")]]
                     
         latLons' = div [style [("background-color", "rgba(255, 255, 255, 0.85)"), ("padding", "20px 10px 10px 20px")]]
                     (Html.span [style [("font-weight", "bold"), ("font-size", "large"), ("color", "black")]] [Html.text "Tail Points"]
