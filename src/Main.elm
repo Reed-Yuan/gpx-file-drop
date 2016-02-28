@@ -107,16 +107,16 @@ dropFileMbx = Signal.mailbox DropZone.DragLeave
 
 errorsSg = 
     let
-        err1 = Signal.map (fst >> List.map toString) parseTasksSg
-        err2 = Signal.map (List.map (\(x, y) -> (toString y) ++ ": " ++ x)) errorMbx.signal
+        err1 = Signal.map (fst >> (\x -> if List.isEmpty x then Nothing else List.map toString x |> Just)) parseTasksSg
+        err2 = Signal.map (\z -> if List.isEmpty z then Nothing else List.map (\(x, y) -> (toString y) ++ ": " ++ x) z |> Just) errorMbx.signal
     in
-        Signal.mergeMany [err1, err2]
+        Signal.mergeMany [err1, err2] |> Signal.Extra.filter [""]
 
 parseTasksSg = 
     let
         parseSingle nativeFile (errs, acts) =
-                if nativeFile.size > 1000000 
-                then Result.Err ("File too big (> 1 M):" ++ nativeFile.name) |>  (\x -> (x :: errs, acts))
+                if nativeFile.size > 200000 
+                then Result.Err ("File too big (> 200 K):" ++ nativeFile.name) |>  (\x -> (x :: errs, acts))
                 else (nativeFile.name, readAsTextFile nativeFile.blob) |> (\x -> (errs, x :: acts))
         parseFiles fileEvt = 
             case fileEvt of
@@ -170,8 +170,8 @@ hideCtlSg =
     in
         Signal.Extra.zip hideVehiclesSg hideInfoSg
     
-render : TileMap.Map -> VideoOptions -> (Maybe Data.Gpx, Form) -> VehicleOptions -> (Bool, Bool) -> Bool -> String -> Element
-render  mapp videoOptions (data_, fullTrace) vehicleOptions (hideVehicles, hideInfo) showWarn browserType = 
+render : TileMap.Map -> VideoOptions -> (Maybe Data.Gpx, (Form, Element)) -> VehicleOptions -> (Bool, Bool) -> Bool -> String -> Element
+render  mapp videoOptions (data_, fullTrace_) vehicleOptions (hideVehicles, hideInfo) showWarn browserType = 
     case data_ of
         Just data ->
             let
@@ -205,9 +205,9 @@ render  mapp videoOptions (data_, fullTrace) vehicleOptions (hideVehicles, hideI
                 vehicleInfo =
                     let
                         icn = (if hideInfo then FontAwesome.arrow_down white 20 else FontAwesome.arrow_up white 20) |> Html.toElement 20 20
-                        switch = layers [spacer 180 20 |> color grey |> Graphics.Element.opacity 0.5, spacer 70 20 `beside` icn]  
+                        switch = layers [spacer 180 20 |> color grey |> Graphics.Element.opacity 0.5, spacer 90 20 `beside` icn]  
                                      |> Graphics.Input.clickable (Signal.message hideInfoMbx.address ())
-                        info_ = (snd traceWithInfo) 
+                        info_ = snd fullTrace_ 
                                 
                         view = (if hideInfo then switch else switch `above` info_)
                    in
@@ -230,7 +230,7 @@ render  mapp videoOptions (data_, fullTrace) vehicleOptions (hideVehicles, hideI
                         view |> toForm |> move (100 - (toFloat w)/2, if hideVehicles then 340 else 40)
                         
             in
-                collage w h [toForm baseMap |> alpha malpha, fullTrace |> alpha talpha, (fst traceWithInfo), 
+                collage w h [toForm baseMap |> alpha malpha, fst fullTrace_ |> alpha talpha, traceWithInfo, 
                      anologClock_, digitClock_, popA, progressBar_, vehicleStateView_, 
                      vehicleInfo, title |> toForm |> move (380 - (toFloat w)/2,  (toFloat h)/2 - 40), 
                      gitLink |> toForm |> move (140 - (toFloat w)/2, 45 - (toFloat h)/2)]
