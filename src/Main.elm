@@ -139,13 +139,20 @@ viewSgA = Signal.map3 initialView screenSizeIn dropZoneStatusSg errorsSg
         
 initialView (w, h) dropFileModel errs = 
     collage w h [
-        (layers [initMap w h, title, gitLink `below` spacer 1 (h - 60)]) |> toForm
-        , dropZoneView dropFileMbx.address dropFileModel |> Html.toElement 600 600 |> toForm
-        , (flow down (List.map (Text.fromString >> Text.height 22 >> Text.color Color.red >> leftAligned) errs) |> toForm)]
+        (layers [initMap w h, spacer 20 1 `beside` title, spacer 20 1 `beside` gitLink `beside` spacer (w - 520) 1 `beside` myLink `below` spacer 1 (h - 60)]) |> toForm
+        , dropZoneView dropFileMbx.address dropFileModel |> Html.toElement 800 600 |> toForm
+        , flow down (List.map (Text.fromString >> Text.height 22 >> Text.color Color.red >> leftAligned) errs) |> toForm |> moveY -80]
 
 gitLink =
         let
             a = Text.fromString "Source code @GitHub" |> Text.link "https://github.com/Reed-Yuan/gpx-file-drop" |> Text.height 22 |> leftAligned
+            b = spacer 240 40 |> color white |> opacity 0.85
+        in
+            layers [b, (spacer 20 1) `beside` a `below` (spacer 1 10)]
+
+myLink =
+        let
+            a = Text.fromString "Developer: Reed Yuan" |> Text.link "https://ca.linkedin.com/in/reed-yuan-7b106b4" |> Text.height 22 |> leftAligned
             b = spacer 240 40 |> color white |> opacity 0.85
         in
             layers [b, (spacer 20 1) `beside` a `below` (spacer 1 10)]
@@ -233,7 +240,9 @@ render  mapp videoOptions (data_, fullTrace_) vehicleOptions (hideVehicles, hide
                 collage w h [toForm baseMap |> alpha malpha, fst fullTrace_ |> alpha talpha, traceWithInfo, 
                      anologClock_, digitClock_, popA, progressBar_, vehicleStateView_, 
                      vehicleInfo, title |> toForm |> move (380 - (toFloat w)/2,  (toFloat h)/2 - 40), 
-                     gitLink |> toForm |> move (140 - (toFloat w)/2, 45 - (toFloat h)/2)]
+                     gitLink |> toForm |> move (140 - (toFloat w)/2, 45 - (toFloat h)/2),
+                     myLink |> toForm |> move ((toFloat w)/2 - 140, 45 - (toFloat h)/2)
+                     ]
         _ -> Graphics.Element.empty
         
 dropZoneStatusSg : Signal DropZone.Model
@@ -243,7 +252,7 @@ dropZoneView :  Signal.Address (DropZone.Action a) -> DropZone.Model -> Html
 dropZoneView address dropZoneModel =
   div
     (renderZoneAttributes address dropZoneModel)
-    [h1 [] [ Html.text "Drop a valid GPX file in this box" ]]
+    [h1 [style [("padding-left", "120px")]] [ Html.text "Drop a valid GPX file in this box" ]]
 
 renderZoneAttributes :  Signal.Address (DropZone.Action a) -> DropZone.Model -> List Html.Attribute
 renderZoneAttributes address dropZoneModel =
@@ -262,7 +271,7 @@ dropZoneDefault =
         , ( "border-radius", "10px")
         , ( "color", "green")
         , ( "border", "6px dashed green")
-        , ("padding", "180px 40px 180px 60px")
+        , ("padding", "280px 40px 280px 60px")
         ]
         
 dropZoneHover =
@@ -271,6 +280,6 @@ dropZoneHover =
         , ( "border-radius", "10px")
         , ( "color", "red")
         , ( "border", "6px dashed red")
-        , ("padding", "180px 40px 180px 60px")
+        , ("padding", "280px 40px 280px 60px")
         ]
             
