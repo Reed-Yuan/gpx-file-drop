@@ -40,6 +40,9 @@ timeFromString str =
 timeToString : Float -> String
 timeToString t = Date.fromTime t |> Date.Format.formatUtc Date.Config.Config_en_us.config "%H:%M:%S"
         
+dateToString : Float -> String
+dateToString t = Date.fromTime t |> Date.Format.formatUtc Date.Config.Config_en_us.config "%Y-%m-%d"
+        
 dateTimeToString : Float -> String
 dateTimeToString t = Date.fromTime t |> Date.Format.formatUtc Date.Config.Config_en_us.config "%Y-%m-%d %H:%M:%S UTC"
 

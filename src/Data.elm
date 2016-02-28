@@ -64,7 +64,7 @@ timelyTrace gpx t tcLength mapp colr icn =
     in 
         Graphics.Collage.group [hstE, head']
 
-txt str colorr = Html.span [style [("font-weight", "bold"), ("font-size", "large"), ("color", colorr)]] [Html.text str]
+txt str colorr size = Html.span [style [("font-weight", "bold"), ("font-size", size), ("color", colorr)]] [Html.text str]
 
 showInfo : Gpx -> String -> Html
 showInfo g colorr = 
@@ -72,16 +72,16 @@ showInfo g colorr =
             Html.span [style [("font-weight", "bold"), ("font-size", "large"), ("color", "black")]] [Html.text g.name]
             :: br [] []
             :: br [] []
-            :: txt ("Start Time: " ) "black"
+            :: txt ("Start Time: " ) "black" "large"
             :: br [] []
             :: br [] []
-            :: txt (g.timeSpan |> fst |> Utils.dateTimeToString) colorr
+            :: txt (g.timeSpan |> fst |> Utils.dateTimeToString) colorr "large"
             :: br [] []
             :: br [] []
-            :: txt ("End Time: ") "black"
+            :: txt ("End Time: ") "black" "large"
             :: br [] []
             :: br [] []
-            :: txt (g.timeSpan |> snd |> Utils.dateTimeToString) colorr
+            :: txt (g.timeSpan |> snd |> Utils.dateTimeToString) colorr "large"
             :: br [] []
             :: [br [] []]
             )
@@ -89,11 +89,12 @@ showInfo g colorr =
 showLatLon : TileMap.Gpsx -> String -> List Html
 showLatLon g colorr = 
             br [] []
-            :: txt ("Time: " ++ timeToString g.timestamp) colorr
+            :: txt ("Date: " ++ dateToString g.timestamp) colorr "medium"
             :: br [] []
-            :: txt ("Lat: " ++ toString g.lat) colorr
+            :: txt ("Time: " ++ timeToString g.timestamp) colorr "medium"
             :: br [] []
-            :: txt ("Lon: " ++ toString g.lon) colorr
+            :: txt ("Lat: " ++ toString g.lat) colorr "medium"
+            :: br [] []
+            :: txt ("Lon: " ++ toString g.lon) colorr "medium"
             :: [br [] []]
-        --|> (Html.toElement 160 160)
         
