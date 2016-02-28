@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Geo Elm</title>
+    <title>GPX Elm</title>
     <style>
         html, body, #map {width:100%; height:100%;margin:0;}
     </style>
@@ -75,6 +75,11 @@
                 }
                 
                 var raw = xmlToJSON.parseString(gpx, myOptions);
+                
+                var error = null;
+                if (raw.gpx[0].parsererror) error = raw.gpx[0].parsererror[0].div[0]._text;
+                if (error) alert("File parsing problem, " + error + ", result may not be accurate.");
+                                    
                 var vehicleName = vehicleName_.replace(".gpx", "");
                 var vName = vehicleName.length > 10 ? vehicleName.substring(0, 10) + "..." : vehicleName;
                 var seg_0 = raw.gpx[0].trk[0].trkseg[0].trkpt;
@@ -90,7 +95,7 @@
                     minLon = Math.min(minLon, pt.lon._value);
                     maxLon = Math.max(maxLon, pt.lon._value);
                     var rst = {"vehicleId": vehicleId, "vehicleName": vName, "lon": pt.lon._value, "lat": pt.lat._value, "timestamp": dt, "speed":0, "direction":0};
-                    //console.log(rst);
+
                     resultAry.push(rst);
                 }
                 return {"id": vehicleId, "name": vName, "gpx": resultAry, "bbox_topLeft": [maxLon, maxLat]

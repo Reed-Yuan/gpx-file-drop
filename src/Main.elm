@@ -37,10 +37,20 @@ port txtOut = txtOutMbx.signal
 txtOutMbx : Signal.Mailbox (List (String, String))
 txtOutMbx = Signal.mailbox []
 
+errorMbx : Signal.Mailbox (List ( String, Error ))
+errorMbx = Signal.mailbox []
+
 port txtOutTsk : Signal (Task a ())
 port txtOutTsk = 
     let
         perf fileTsk = (Task.map snd fileTsk) `Task.andThen` Signal.send txtOutMbx.address
+    in
+        Signal.map perf parseTxtSg
+
+port errorTsk : Signal (Task a ())
+port errorTsk = 
+    let
+        perf fileTsk = (Task.map fst fileTsk) `Task.andThen` Signal.send errorMbx.address
     in
         Signal.map perf parseTxtSg
 
@@ -95,12 +105,19 @@ showWarnMbx = Signal.mailbox True
 dropFileMbx : Signal.Mailbox (DropZone.Action (List NativeFile))
 dropFileMbx = Signal.mailbox DropZone.DragLeave
 
+errorsSg = 
+    let
+        err1 = Signal.map (fst >> List.map toString) parseTasksSg
+        err2 = Signal.map (List.map (\(x, y) -> (toString y) ++ ": " ++ x)) errorMbx.signal
+    in
+        Signal.mergeMany [err1, err2]
+
 parseTasksSg = 
     let
         parseSingle nativeFile (errs, acts) =
-            if nativeFile.size > 500000 
-            then Result.Err ("File too big (> 500K):" ++ nativeFile.name) |>  (\x -> (x :: errs, acts))
-            else (nativeFile.name, readAsTextFile nativeFile.blob) |> (\x -> (errs, x :: acts))
+                if nativeFile.size > 1000000 
+                then Result.Err ("File too big (> 1 M):" ++ nativeFile.name) |>  (\x -> (x :: errs, acts))
+                else (nativeFile.name, readAsTextFile nativeFile.blob) |> (\x -> (errs, x :: acts))
         parseFiles fileEvt = 
             case fileEvt of
                 Drop files -> List.foldl parseSingle ([], []) files
@@ -118,12 +135,13 @@ type alias Model =
     
 main = Signal.Extra.switchWhen (Signal.map List.isEmpty vehicleIn) viewSgA gpxView
     
-viewSgA = Signal.map2 initialView screenSizeIn dropZoneStatusSg
+viewSgA = Signal.map3 initialView screenSizeIn dropZoneStatusSg errorsSg
         
-initialView (w, h) dropFileModel = 
+initialView (w, h) dropFileModel errs = 
     collage w h [
         (layers [initMap w h, title, gitLink `below` spacer 1 (h - 60)]) |> toForm
-        , dropZoneView dropFileMbx.address dropFileModel |> Html.toElement 600 600 |> toForm]
+        , dropZoneView dropFileMbx.address dropFileModel |> Html.toElement 600 600 |> toForm
+        , (flow down (List.map (Text.fromString >> Text.height 22 >> Text.color Color.red >> leftAligned) errs) |> toForm)]
 
 gitLink =
         let
