@@ -10,6 +10,7 @@ import Maybe
 import Proj
 import Html exposing (..)
 import List.Extra
+import Utils
 
 type alias Map = 
     {
@@ -63,9 +64,9 @@ proj (lat, lon) mapp =
 path: List Gpsx -> Map -> Graphics.Collage.LineStyle -> Graphics.Collage.Form
 path p mapp s = 
     let
-        p' = List.map (\g -> move (proj (g.lat, g.lon) mapp) (circle 4 |> filled s.color) ) p
-        p_ = List.map (\g -> proj (g.lat, g.lon) mapp) p
-        p'' = (Graphics.Collage.traced s (Graphics.Collage.path p_)) :: p'
+        projectedPoints = List.map (\g -> proj (g.lat, g.lon) mapp) p --|> Utils.dropRepeats
+        p' = List.map (\(x, y) -> move (x, y) (circle 4 |> filled s.color)) projectedPoints
+        p'' = (Graphics.Collage.traced s (Graphics.Collage.path projectedPoints)) :: p'
     in
         group p''
         

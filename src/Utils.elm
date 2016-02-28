@@ -11,6 +11,20 @@ import Signal.Extra
 import Task
 import Time
 
+dropRepeats : List comparable -> List comparable
+dropRepeats lst = 
+    let
+        step x (mature, t) = 
+            case t of
+                Nothing -> ([], Just x)
+                Just y -> if x == y 
+                          then (mature, Just x) 
+                          else ((Just y) :: mature, Just x)
+    in            
+        List.foldr step ([], Nothing) lst 
+        |> (\x -> snd x :: fst x)
+        |> List.filterMap identity
+
 global_tzone : Float
 global_tzone = Date.fromTime 0 |> Date.Create.getTimezoneOffset |> (*) 60000 |> (-) 0 |> toFloat
 
