@@ -65,7 +65,7 @@ path: List Gpsx -> Map -> Graphics.Collage.LineStyle -> Graphics.Collage.Form
 path p mapp s = 
     let
         projectedPoints = List.map (\g -> proj (g.lat, g.lon) mapp) p --|> Utils.dropRepeats
-        p' = List.map (\(x, y) -> move (x, y) (circle 4 |> filled s.color)) projectedPoints
+        p' = List.map (\(x, y) -> move (x, y) (circle 6 |> filled s.color)) projectedPoints
         p'' = (Graphics.Collage.traced s (Graphics.Collage.path projectedPoints)) :: p'
     in
         group p''

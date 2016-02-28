@@ -22,11 +22,11 @@ type alias Gpx =
         , timeSpan: (Time, Time)
     }
 
-fullTrace : Maybe Gpx -> Color -> TileMap.Map -> (Form, Element)
+fullTrace : Maybe Gpx -> Color -> TileMap.Map -> Form
 fullTrace gpsx colr mapp =
     case gpsx of
-        Just gpsx' -> (TileMap.path gpsx'.gpx mapp {defaultLine | color = colr, width = 2}, latLons gpsx'.gpx Color.blue)
-        _ -> (Graphics.Collage.toForm empty, empty)
+        Just gpsx' -> TileMap.path2 gpsx'.gpx mapp {defaultLine | color = colr, width = 8}
+        _ -> Graphics.Collage.toForm empty
         
 latLons trace colr = 
     let
@@ -35,7 +35,7 @@ latLons trace colr =
     in
         div [style [("background-color", "rgba(255, 255, 255, 0.85)"), ("padding", "20px 10px 10px 20px")]]
                         (Html.span [style [("font-weight", "bold"), ("font-size", "large"), ("color", "black")]] 
-                        [Html.text ("Route: " ++ (toString <| List.length trace) ++ " points")]
+                        [Html.text ("Tail: " ++ (toString <| List.length trace) ++ (if List.length trace == 50 then "+" else "") ++ " points")]
                          :: [latLons']) |> Html.toElement 180 660
 
 head trace icn colr mapp = case (List.head trace) of
@@ -53,16 +53,18 @@ head trace icn colr mapp = case (List.head trace) of
                     Graphics.Collage.group [p, xy, t]
             _ -> Graphics.Element.empty |> toForm
 
-timelyTrace: Gpx -> Time -> Int -> TileMap.Map -> Color -> (Color -> Int -> Html) -> Form
+timelyTrace: Gpx -> Time -> Int -> TileMap.Map -> Color -> (Color -> Int -> Html) -> (Form, Element)
 timelyTrace gpx t tcLength mapp colr icn = 
     let
-        trace' = List.filter (\g -> g.timestamp < t && t - g.timestamp <= (if tcLength == 0 then 24 else tcLength) * 60000) gpx.gpx |> List.reverse
+        trace' = List.filter (\g -> g.timestamp < t && t - g.timestamp <= (if tcLength == 0 then 24 else tcLength) * 60000) gpx.gpx 
+                    |> List.reverse |> List.take 50
         head' = head trace' icn colr mapp
         hstE = 
             if tcLength == 0 then Graphics.Element.empty  |> toForm
-            else TileMap.path2 trace' mapp {defaultLine | color = Color.darkGreen, width = 6, dashing=[8, 4]}
+            else TileMap.path trace' mapp {defaultLine | color = Color.darkGreen, width = 2}
+        latLons' = latLons trace' colr
     in 
-        Graphics.Collage.group [hstE, head']
+        (Graphics.Collage.group [hstE, head'], latLons')
 
 txt str colorr size = Html.span [style [("font-weight", "bold"), ("font-size", size), ("color", colorr)]] [Html.text str]
 
