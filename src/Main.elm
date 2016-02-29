@@ -115,8 +115,8 @@ errorsSg =
 parseTasksSg = 
     let
         parseSingle nativeFile (errs, acts) =
-                if nativeFile.size > 200000 
-                then Result.Err ("File too big (> 200 K):" ++ nativeFile.name) |>  (\x -> (x :: errs, acts))
+                if nativeFile.size > 1000000 
+                then Result.Err ("File too big (> 1 M):" ++ nativeFile.name) |>  (\x -> (x :: errs, acts))
                 else (nativeFile.name, readAsTextFile nativeFile.blob) |> (\x -> (errs, x :: acts))
         parseFiles fileEvt = 
             case fileEvt of
@@ -139,7 +139,7 @@ viewSgA = Signal.map3 initialView screenSizeIn dropZoneStatusSg errorsSg
         
 initialView (w, h) dropFileModel errs = 
     collage w h [
-        (layers [initMap w h, spacer 20 1 `beside` title, spacer 20 1 `beside` gitLink `beside` spacer (w - 520) 1 `beside` myLink `below` spacer 1 (h - 60)]) |> toForm
+        (layers [initMap w h, spacer 20 1 `beside` title, spacer 20 1 `beside` myLink `beside` spacer (w - 520) 1 `beside` gitLink `below` spacer 1 (h - 60)]) |> toForm
         , dropZoneView dropFileMbx.address dropFileModel |> Html.toElement 800 600 |> toForm
         , flow down (List.map (Text.fromString >> Text.height 22 >> Text.color Color.red >> leftAligned) errs) |> toForm |> moveY -80]
 
@@ -240,8 +240,8 @@ render  mapp videoOptions (data_, fullTrace_) vehicleOptions (hideVehicles, hide
                 collage w h [toForm baseMap |> alpha malpha, fullTrace_ |> alpha talpha, fst traceWithInfo, 
                      anologClock_, digitClock_, popA, progressBar_, vehicleStateView_, 
                      vehicleInfo, title |> toForm |> move (380 - (toFloat w)/2,  (toFloat h)/2 - 40), 
-                     gitLink |> toForm |> move (140 - (toFloat w)/2, 45 - (toFloat h)/2),
-                     myLink |> toForm |> move ((toFloat w)/2 - 140, 45 - (toFloat h)/2)
+                     myLink |> toForm |> move (140 - (toFloat w)/2, 45 - (toFloat h)/2),
+                     gitLink |> toForm |> move ((toFloat w)/2 - 140, 45 - (toFloat h)/2)
                      ]
         _ -> Graphics.Element.empty
         
